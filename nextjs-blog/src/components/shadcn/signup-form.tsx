@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { FormEventHandler } from "react";
 
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardContent } from "@/components/shadcn/ui/card";
 import {
@@ -45,6 +45,17 @@ export function SignupForm({
                   {error}
                 </div>
               ) : null}
+
+              <Field className="grid grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                  <Input id="firstName" name="firstName" autoComplete="given-name" maxLength={100} required />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                  <Input id="lastName" name="lastName" autoComplete="family-name" maxLength={100} required />
+                </Field>
+              </Field>
 
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>

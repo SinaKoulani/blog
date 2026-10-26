@@ -1,8 +1,12 @@
+
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { SignupForm } from "@/components/shadcn/signup-form";
+import { signupSchema } from "@/lib/validations/auth-test";
+import { getAuth } from "@/api/generated/auth/auth";
+import { safeCall } from "@/api/err/safe-call";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,29 +18,47 @@ export default function SignupPage() {
     setError(null);
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
-    const payload = {
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
-      confirmPassword: String(formData.get("confirm-password") ?? ""),
-    };
 
+    /**
+     * Validate form data with Zod.
+     * API errors are handled by safeCall and appHttpErr.
+     *
+     * Validation schema:
+     * src/lib/validations/auth-test.ts
+     *
+     * Error handling:
+     * src/api/err/
+     */
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const formData = new FormData(event.currentTarget);
 
-      const data = await response.json().catch(() => ({}));
+      const payload = {
+        firstName: String(formData.get("firstName") ?? ""),
+        lastName: String(formData.get("lastName") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        confirmPassword: String(formData.get("confirm-password") ?? ""),
+      };
 
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed. Please check your details.");
+      const validation = signupSchema.safeParse(payload);
+
+      if (!validation.success) {
+        setError(validation.error.issues[0]?.message ?? "Invalid form data");
+        return;
+      }
+
+      const { confirmPassword, ...registerDto } = validation.data;
+
+      const result = await safeCall(() =>
+        getAuth().authControllerRegister(registerDto)
+      );
+
+      if (!result.isOK) {
+        setError(result.error.displayMessage);
+        return;
       }
 
       router.push("/login");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -45,7 +67,11 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-4xl">
-        <SignupForm onSubmit={handleSubmit} isSubmitting={isSubmitting} error={error} />
+        <SignupForm
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+        />
       </div>
     </div>
   );

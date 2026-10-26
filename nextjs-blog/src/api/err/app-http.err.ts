@@ -20,8 +20,11 @@ export class appHttpErr extends Error {
      * 
      * @param error anything catch in a 'catch' block (always 'unknown' in ts)
      */
+
+
     constructor(error : unknown) {
         super(error instanceof Error ? error.message : "unknown error, we coocked");
+        this.name= "appHttpErr"
         this._originalError= error;
 
     }
@@ -38,33 +41,36 @@ export class appHttpErr extends Error {
      * -1 when the error did not come from axios at all (a bug in our code)
      */
     get statusCode(): number{
-        if (this.isAxiosError){
-            return (this._originalError as AxiosError).response?.status ?? 0;
+        if (!this.isAxiosError){
+            return -1;
         }
-        return -1;
+        
+        return (this._originalError as AxiosError).response?.status ?? 0;
     }
 
     /**and we show message for the current statusCode */
     get displayMessage(): string{
         switch(this.statusCode){
-        case 0:
-            return "we lost our conection with server check your conection";
-        case 400:
-            return "Invalid request";
-        case 401:
-            return "Invalid credentials or session expired.";
-        case 403:
-            return "You do not have permission to do this.";
-        case 404:
-            return "Not found.";
-        case 409:
-            return "This item already exists.";
-        case 500:
-            return "Server error. Please try again later.";
-        case 502:
-            return "Network error between services.";
-        default:
-            return "we coocked up, unknown err";
+                case 0:
+                return "Unable to connect to the server. Please try again later.";
+            case 400:
+                return "Invalid request data.";
+            case 401:
+                return "Invalid email or password.";
+            case 403:
+                return "You do not have permission to perform this action.";
+            case 404:
+                return "The requested resource was not found.";
+            case 409:
+                return "An account with this email already exists.";
+            case 422:
+                return "Please check the information you entered.";
+            case 500:
+                return "Server error. Please try again later.";
+            case 502:
+                return "A network error occurred. Please try again later.";
+            default:
+                return "An unexpected error occurred.";
         }
     }
 
@@ -73,9 +79,19 @@ export class appHttpErr extends Error {
      * client-only it uses window , so never call it in a server component
      * use it for data pages (e.g. a missing post), not for form errors.
      */
-    redirect(){
+    redirect(): void {
+
+        /**
+         * check if window exist
+         */
+        if (typeof window === "undefined"){
+            return;
+        }
         const source = encodeURIComponent(window.location.href);
         window.location.href = `/${this.statusCode}?source=${source}`;
     }
 }
 
+/**
+ * btw "window" is a browser object that gives us access to the current page URL.
+ */
